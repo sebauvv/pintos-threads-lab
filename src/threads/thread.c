@@ -200,6 +200,7 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+  thread_yield(); // Se produce un cambio de contexto si la prioridad del nuevo hilo es mayor que la del hilo actual
 
   return tid;
 }
@@ -237,7 +238,11 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+
+  // Antes: El hilo se insertaba en la lista de hiloss list_push_back 
+  //list_push_back (&ready_list, &t->elem);
+  list_insert_ordered(&ready_list, &t->elem, (list_less_func *) &is_first_thread_priority_greater, NULL);
+
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -308,7 +313,9 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    //list_push_back (&ready_list, &cur->elem);
+    // Cambio: Ahora el thread se inserta en la lista de threads ordenada según prioridad
+    list_insert_ordered(&ready_list, &cur->elem, (list_less_func *) &is_first_thread_priority_greater, 0);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -331,11 +338,21 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+
+// Alternativa a obtener la prioridad de un hilo
+int
+thread_get_priority_by_elem (struct list_elem *a)
+{
+  struct thread *thread_a = list_entry (a, struct thread, elem);
+  return thread_a->priority;
+}
+
 /** Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  thread_yield(); // Si hay un thread con mayor prioridad, dicho thread se ejecutará
 }
 
 /** Returns the current thread's priority. */
@@ -343,6 +360,21 @@ int
 thread_get_priority (void) 
 {
   return thread_current ()->priority;
+}
+
+// Booleano que compara la prioridad de dos hilos
+// True: si la prioridad del primer hilo es mayor que la del segundo hilo
+// False: caso contrario
+bool 
+is_first_thread_priority_greater (
+  struct list_elem *a, 
+  struct list_elem *b
+) {
+
+  int a_priority = thread_get_priority_by_elem(a);
+  int b_priority = thread_get_priority_by_elem(b);
+
+  return a_priority > b_priority;
 }
 
 /** Sets the current thread's nice value to NICE. */
@@ -578,7 +610,7 @@ allocate_tid (void)
 
   return tid;
 }
-
+
 /** Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
