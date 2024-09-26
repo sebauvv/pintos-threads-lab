@@ -7,6 +7,8 @@ To know more about the operating system and projects related to it, visit [http:
 This version of Pintos-OS is froked from **git://pintos-os.org/pintos-anon**.
 You can also view the Stanford git repository of Pintos-OS using their web CGI [http://pintos-os.org/cgi-bin/gitweb.cgi](http://pintos-os.org/cgi-bin/gitweb.cgi).
 
+![image](https://github.com/user-attachments/assets/2c576146-c8e1-4cad-9513-28ddee71e5e7)
+
 ## Getting Started
 There are two branches for the base operating system (without the project code): `master` and `configured`.
 The unmodified fork of the original repository is in the `master` branch.
