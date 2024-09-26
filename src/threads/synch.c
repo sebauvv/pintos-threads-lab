@@ -58,7 +58,7 @@ sema_init (struct semaphore *sema, unsigned value)
    interrupts disabled, but if it sleeps then the next scheduled
    thread will probably turn interrupts back on. */
 void
-sema_down (struct semaphore *sema) 
+sema_down (struct semaphore *sema)
 {
   enum intr_level old_level;
 
@@ -66,7 +66,7 @@ sema_down (struct semaphore *sema)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  while (sema->value == 0) 
+  while (sema->value == 0)
     {
       //Se inserta el thread en la lista de threads en espera
       list_insert_ordered (&sema->waiters, &thread_current ()->elem, 
@@ -205,7 +205,7 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-  if (lock->holder != NULL)
+  if (!thread_mlfqs && lock->holder != NULL)
     {
       donate_priority (lock);
       assign_waiting_lock (lock);
@@ -244,17 +244,19 @@ lock_try_acquire (struct lock *lock)
    make sense to try to release a lock within an interrupt
    handler. */
 void
-lock_release (struct lock *lock) 
+lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
-  ASSERT (!list_empty (&thread_current ()->locks_on_hold));
-  ASSERT (thread_current ()->priority >= thread_current ()->starting_priority );
+  
+  lock->holder = NULL;
 
-  remove_thread_with_locks(lock); 
-  reset_priority ();
-
-  lock->holder = NULL;   
+  if (!thread_mlfqs){
+    ASSERT (!list_empty (&thread_current ()->locks_on_hold));
+    ASSERT (thread_current ()->priority >= thread_current ()->starting_priority );
+    remove_thread_with_locks(lock);
+    reset_priority ();
+  }
   sema_up (&lock->semaphore);
 }
 
